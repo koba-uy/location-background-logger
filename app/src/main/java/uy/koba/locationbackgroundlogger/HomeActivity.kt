@@ -1,7 +1,13 @@
 package uy.koba.locationbackgroundlogger
 
-import android.support.v7.app.AppCompatActivity
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Bundle
+import android.support.v4.app.ActivityCompat
+import android.support.v4.app.ActivityCompat.checkSelfPermission
+import android.support.v7.app.AlertDialog
+import android.support.v7.app.AppCompatActivity
+import android.Manifest
 
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
@@ -14,14 +20,27 @@ class HomeActivity : AppCompatActivity(), OnMapReadyCallback {
 
     private lateinit var mMap: GoogleMap
 
+    // AppCompatActivity methods
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-        val mapFragment = supportFragmentManager
-                .findFragmentById(R.id.map) as SupportMapFragment
+        val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
+
+        checkPermissionAndStartLocationService(Manifest.permission.ACCESS_FINE_LOCATION)
     }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+
+        if (requestCode == 1) {
+            checkPermissionAndStartLocationService(permissions[0])
+        }
+    }
+
+    // OnMapReadyCallback methods
 
     /**
      * Manipulates the map once available.
@@ -40,4 +59,32 @@ class HomeActivity : AppCompatActivity(), OnMapReadyCallback {
         mMap.addMarker(MarkerOptions().position(sydney).title("Marker in Sydney"))
         mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney))
     }
+
+    // member methods
+
+    fun checkPermissionAndStartLocationService(permission: String) {
+        if (checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED) {
+            startService(Intent(this, LocationService::class.java))
+        }
+        else {
+            // Should we show an explanation?
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this, permission)) {
+                // Show an explanation to the user *asynchronously* -- don't block
+                // this thread waiting for the user's response! After the user
+                // sees the explanation, try again to request the permission.
+                AlertDialog
+                    .Builder(this)
+                    .setTitle("Koba")
+                    .setMessage("Could you tell me your location?")
+                    .setPositiveButton("Yes, of course!", { _, _ -> ActivityCompat.requestPermissions(this, arrayOf(permission), 1) })
+                    .create()
+                    .show()
+            }
+            // No explanation needed, we can request the permission.
+            else {
+                ActivityCompat.requestPermissions(this, arrayOf(permission), 1)
+            }
+        }
+    }
+
 }
