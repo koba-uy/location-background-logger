@@ -1,7 +1,11 @@
 package uy.koba.locationbackgroundlogger
 
-import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.location.Location
 import android.os.Bundle
 import android.support.v4.app.ActivityCompat
 import android.support.v4.app.ActivityCompat.checkSelfPermission
@@ -18,18 +22,39 @@ import com.google.android.gms.maps.model.MarkerOptions
 
 class HomeActivity : AppCompatActivity(), OnMapReadyCallback {
 
-    private lateinit var mMap: GoogleMap
+    private lateinit var locationChangeBroadcastReceiver: BroadcastReceiver
+    private lateinit var map: GoogleMap
 
     // AppCompatActivity methods
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_home)
+
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         val mapFragment = supportFragmentManager.findFragmentById(R.id.map) as SupportMapFragment
         mapFragment.getMapAsync(this)
 
+        // Start location service
         checkPermissionAndStartLocationService(Manifest.permission.ACCESS_FINE_LOCATION)
+    }
+
+    override fun onStart() {
+        super.onStart()
+
+        locationChangeBroadcastReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                showLocationOnMap(intent.extras["location"] as Location)
+            }
+        }
+
+        registerReceiver(locationChangeBroadcastReceiver, IntentFilter("locationChange"))
+    }
+
+    override fun onStop() {
+        super.onStop()
+
+        unregisterReceiver(locationChangeBroadcastReceiver)
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -42,27 +67,13 @@ class HomeActivity : AppCompatActivity(), OnMapReadyCallback {
 
     // OnMapReadyCallback methods
 
-    /**
-     * Manipulates the map once available.
-     * This callback is triggered when the map is ready to be used.
-     * This is where we can add markers or lines, add listeners or move the camera. In this case,
-     * we just add a marker near Sydney, Australia.
-     * If Google Play services is not installed on the device, the user will be prompted to install
-     * it inside the SupportMapFragment. This method will only be triggered once the user has
-     * installed Google Play services and returned to the app.
-     */
-    override fun onMapReady(googleMap: GoogleMap) {
-        mMap = googleMap
-
-        // Add a marker in Sydney and move the camera
-        val sydney = LatLng(-34.0, 151.0)
-        mMap.addMarker(MarkerOptions().position(sydney).title("Marker in Sydney"))
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney))
+    override fun onMapReady(map: GoogleMap) {
+        this.map = map
     }
 
     // member methods
 
-    fun checkPermissionAndStartLocationService(permission: String) {
+    private fun checkPermissionAndStartLocationService(permission: String) {
         if (checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED) {
             startService(Intent(this, LocationService::class.java))
         }
@@ -84,6 +95,15 @@ class HomeActivity : AppCompatActivity(), OnMapReadyCallback {
             else {
                 ActivityCompat.requestPermissions(this, arrayOf(permission), 1)
             }
+        }
+    }
+
+    private fun showLocationOnMap(location: Location) {
+        val position = LatLng(location.latitude, location.longitude)
+
+        map.run {
+            addMarker(MarkerOptions().position(position))
+            moveCamera(CameraUpdateFactory.newLatLngZoom(position, 16f))
         }
     }
 

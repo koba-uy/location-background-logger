@@ -46,10 +46,11 @@ class LocationService : Service(), LocationListener {
 
     // LocationListener methods
 
-    override fun onLocationChanged(location: Location) {
-        Log.i("onLocationChanged", location.toString())
+    override fun onLocationChanged(l: Location) {
+        Log.i("onLocationChanged", l.toString())
 
-        this.location.set(location)
+        broadcastLocationChange(l)
+        location.set(l)
     }
 
     override fun onStatusChanged(provider: String, status: Int, bundle: Bundle) {
@@ -65,6 +66,13 @@ class LocationService : Service(), LocationListener {
     }
 
     // member methods
+
+    private fun broadcastLocationChange(location: Location) {
+        val intent = Intent()
+        intent.action = "locationChange"
+        intent.putExtra("location", location)
+        sendBroadcast(intent)
+    }
 
     @SuppressLint("LongLogTag")
     private fun startRequestingLocationUpdates() {
