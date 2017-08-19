@@ -11,6 +11,9 @@ import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
 
+import java.io.File
+import java.util.*
+
 /**
  * Created by agurz on 8/17/17.
  */
@@ -50,6 +53,7 @@ class LocationService : Service(), LocationListener {
         Log.i("onLocationChanged", l.toString())
 
         broadcastLocationChange(l)
+        saveLocationToFile(l)
         location.set(l)
     }
 
@@ -72,6 +76,11 @@ class LocationService : Service(), LocationListener {
         intent.action = "locationChange"
         intent.putExtra("location", location)
         sendBroadcast(intent)
+    }
+
+    private fun saveLocationToFile(location: Location) {
+        File(applicationContext.filesDir, "location.log")
+            .appendText("${Date().time} ${location.latitude} ${location.longitude}\n")
     }
 
     @SuppressLint("LongLogTag")
